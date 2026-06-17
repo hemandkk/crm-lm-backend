@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from jose import JWTError
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -44,6 +43,7 @@ def _auth_response(user: User, access_token: str):
             "email": user.email,
             "employee_id": user.employee_id,
             "employeeId": user.employee_id,
+            "name":user.name,
             "role": user.role.value,
             "status": "active" if user.is_active else "inactive",
         },
@@ -86,7 +86,7 @@ def employee_login(payload: EmployeeLoginRequest, db: Session = Depends(get_db))
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
     try:
         claims = decode_token(payload.refresh_token)
-    except JWTError:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
@@ -112,3 +112,5 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
 @router.post("/logout")
 def logout():
     return {"message": "Logged out successfully"}
+""" .\.venv\Scripts\python.exe -c "from app.database.session import SessionLocal; from app.models.user import User, UserRole; from app.core.security import hash_password; db=SessionLocal(); email='admin@example.com'; password='Admin@123'; existing=db.query(User).filter(User.email==email).first(); print('Admin already exists' if existing else 'Creating admin'); db.add(User(email=email, employee_id=None, password_hash=hash_password(password), role=UserRole.admin, is_active=True)) if not existing else None; db.commit(); db.close()"
+ """

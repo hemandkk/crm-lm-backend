@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from datetime import datetime, UTC
 from app.models.user import User
 from app.core.security import (
     verify_password,
@@ -35,6 +36,8 @@ def login_user(
         user.password_hash
     ):
         return None
+    user.last_login = datetime.now(UTC)
+    db.commit()
 
     return create_access_token(
         {

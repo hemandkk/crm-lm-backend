@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.database.session import get_db
 from app.models.user import User, UserRole
+from backend.app.utils.id_generator import generate_employee_id
 
 router = APIRouter(tags=["Employees"])
 
@@ -17,6 +18,10 @@ class EmployeeCreate(BaseModel):
     employee_id: Optional[str] = Field(default=None, alias="employeeId")
     password: str = "Password@123"
     role: UserRole = UserRole.employee
+    name: str
+    department: str
+    designation: str
+    phone: str
     status: Literal["active", "inactive"] = "active"
 
     class Config:
@@ -28,6 +33,10 @@ class EmployeeUpdate(BaseModel):
     employee_id: Optional[str] = Field(default=None, alias="employeeId")
     password: Optional[str] = None
     role: Optional[UserRole] = None
+    name: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    phone: str
     status: Optional[Literal["active", "inactive"]] = None
 
     class Config:
@@ -53,6 +62,7 @@ def _employee_out(user: User):
         "employee_id": user.employee_id,
         "employeeId": user.employee_id,
         "role": user.role.value,
+        "name":user.name,
         "status": status_value,
         "is_active": user.is_active,
         "isActive": user.is_active,
@@ -110,9 +120,17 @@ def list_employees(
 
 @router.post("", status_code=201)
 def create_employee(body: EmployeeCreate, db: Session = Depends(get_db)):
-    duplicate_filters = [User.email == body.email]
-    if body.employee_id:
-        duplicate_filters.append(User.employee_id == body.employee_id)
+    employee_id = body.employee_id
+
+    if not employee_id:
+        employee_id = generate_employee_id(db)
+    duplicate_filters = [
+        User.email == body.email,
+        User.employee_id == employee_id
+    ]
+
+    """ if body.employee_id:
+        duplicate_filters.append(User.employee_id == body.employee_id) """
 
     existing = db.query(User).filter(or_(*duplicate_filters)).first()
     if existing:
@@ -120,6 +138,7 @@ def create_employee(body: EmployeeCreate, db: Session = Depends(get_db)):
 
     user = User(
         email=body.email,
+        name=body.name,
         employee_id=body.employee_id,
         password_hash=hash_password(body.password),
         role=body.role,
@@ -143,6 +162,8 @@ def update_employee(employee_id: str, body: EmployeeUpdate, db: Session = Depend
 
     if data.get("email") is not None:
         user.email = data["email"]
+    if data.get("name") is not None:
+        user.name = data["name"]
     if data.get("employee_id") is not None:
         user.employee_id = data["employee_id"]
     if data.get("password") is not None:
@@ -200,4 +221,10 @@ def get_performance(
         "conversionRate": 0,
         "target": 0,
         "achieved": 0,
+    }
+
+@router.get("/next-employee-id")
+def get_next_employee_id(db: Session = Depends(get_db)):
+    return {
+        "employeeId": generate_employee_id(db)
     }
