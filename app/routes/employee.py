@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.database.session import get_db
 from app.models.user import User, UserRole
-from backend.app.utils.id_generator import generate_employee_id
+from app.utils.id_generator import generate_employee_id
 
 router = APIRouter(tags=["Employees"])
 
@@ -139,7 +139,7 @@ def create_employee(body: EmployeeCreate, db: Session = Depends(get_db)):
     user = User(
         email=body.email,
         name=body.name,
-        employee_id=body.employee_id,
+        employee_id=employee_id,
         password_hash=hash_password(body.password),
         role=body.role,
         is_active=body.status == "active",
@@ -223,7 +223,7 @@ def get_performance(
         "achieved": 0,
     }
 
-@router.get("/next-employee-id")
+@router.get("/meta/next-employee-id")
 def get_next_employee_id(db: Session = Depends(get_db)):
     return {
         "employeeId": generate_employee_id(db)

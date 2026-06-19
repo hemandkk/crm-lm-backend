@@ -1,6 +1,6 @@
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import Prospect
+from app.models.prospects import Prospect
 import re
 from sqlalchemy.orm import Session
 from app.models.user import User

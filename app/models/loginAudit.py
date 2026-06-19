@@ -1,3 +1,9 @@
+from app.database.mixins import TimestampMixin
+from sqlalchemy import (Column,  Integer, String,ForeignKey, Boolean, DateTime,func, Enum, Numeric)
+from app.database.mixins import TimestampMixin
+from app.database import Base
+
+
 class LoginAudit(TimestampMixin, Base):
     __tablename__ = "login_audits"
 
