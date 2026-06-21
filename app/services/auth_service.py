@@ -6,6 +6,8 @@ from app.core.security import (
     create_access_token,
 )
 
+from fastapi import Depends, HTTPException
+
 
 def login_user(
     db: Session,

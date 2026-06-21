@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.database import Base, engine
 from app.database.session import get_db
-from app.models.user import User
+from app.models import User
 from app.routes import auth, employee, prospects
 
 Base.metadata.create_all(bind=engine)

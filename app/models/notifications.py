@@ -4,6 +4,7 @@ from app.database.mixins import TimestampMixin
 from app.database import Base
 
 
+
 class Notification(TimestampMixin, Base):
     """
     Notifies an employee — lead assigned, follow-up reminder, stage change, etc.
@@ -22,3 +23,8 @@ class Notification(TimestampMixin, Base):
     read = Column(Boolean, default=False, nullable=False)
 
     user = relationship("User", foreign_keys=[user_id])
+
+    user = relationship(
+        "User",
+        back_populates="notifications",
+    )

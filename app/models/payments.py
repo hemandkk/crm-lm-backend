@@ -1,121 +1,88 @@
-# app/routers/payments.py
-from datetime import date
-from typing import Optional
-from uuid import UUID
+from datetime import datetime
+import enum
 
-from fastapi import APIRouter, File, Form, Query, UploadFile, HTTPException, status
-from app.core.deps import CurrentEmployee, CurrentAnyUser, DBSession
-from app.schemas import PaymentCreate, PaymentOut, PaymentSummaryOut, PaginatedResponse
-from app.services import payment_service
+from sqlalchemy import (
+    Column,
+    Integer,
+    ForeignKey,
+    Numeric,
+    Text,
+    DateTime,
+    Enum,
+    func,
+)
+from sqlalchemy.orm import relationship
 
-router = APIRouter(tags=["Payments"])
+from app.database import Base
 
 
-@router.get("", response_model=PaginatedResponse[PaymentOut])
-async def list_payments(
-    db: DBSession,
-    current_user: CurrentAnyUser,
-    date_from: Optional[date] = Query(None),
-    date_to: Optional[date] = Query(None),
-    prospect_id: Optional[UUID] = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-):
-    employee_id = None
-    if current_user.user_type == "employee":
-        employee_id = current_user.user.id
+class PaymentType(str, enum.Enum):
+    advance = "advance"
+    installment = "installment"
+    final = "final"
 
-    return await payment_service.list_payments(
-        db,
-        employee_id=employee_id,
-        prospect_id=prospect_id,
-        date_from=date_from,
-        date_to=date_to,
-        page=page,
-        page_size=page_size,
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True)
+
+    prospect_id = Column(
+        Integer,
+        ForeignKey("prospects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
-
-@router.post("", response_model=PaymentOut, status_code=201)
-async def create_payment(
-    db: DBSession,
-    current_employee: CurrentEmployee,
-    prospect_id: UUID = Form(...),
-    amount: float = Form(...),
-    payment_type: str = Form(...),
-    payment_date: date = Form(...),
-    notes: Optional[str] = Form(None),
-    receipt: Optional[UploadFile] = File(None),
-):
-    from decimal import Decimal
-    data = PaymentCreate(
-        prospect_id=prospect_id,
-        amount=Decimal(str(amount)),
-        payment_type=payment_type,
-        payment_date=payment_date,
-        notes=notes,
-    )
-    payment = await payment_service.create_payment(db, data, current_employee, receipt)
-    return PaymentOut(
-        id=payment.id,
-        prospect_id=payment.prospect_id,
-        amount=float(payment.amount),
-        payment_type=payment.payment_type,
-        payment_date=payment.payment_date,
-        receipt_url=payment.receipt_url,
-        notes=payment.notes,
-        created_by=payment.created_by,
-        created_at=payment.created_at,
+    amount = Column(
+        Numeric(15, 2),
+        nullable=False,
     )
 
-
-# ─── Phase 2: Upload receipt to existing payment ─────────────────
-
-@router.post("/{payment_id}/receipt", response_model=PaymentOut)
-async def upload_payment_receipt(
-    db: DBSession,
-    current_employee: CurrentEmployee,
-    payment_id: int,
-    receipt: UploadFile = File(...),
-):
-    """Upload receipt to an existing payment (two-phase upload)."""
-    payment = await payment_service.get_payment(db, payment_id)
-    
-    if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
-    
-    # Optional: verify employee owns this payment or has access
-    # if current_user.user_type == "employee" and payment.created_by_id != current_user.user.id:
-    #     raise HTTPException(status_code=403, detail="Not authorized")
-    
-    updated = await payment_service.upload_receipt(db, payment, receipt)
-    return PaymentOut(
-        id=updated.id,
-        prospect_id=updated.prospect_id,
-        amount=float(updated.amount),
-        payment_type=updated.payment_type,
-        payment_date=updated.payment_date,
-        receipt_url=updated.receipt_url,
-        notes=updated.notes,
-        created_by=updated.created_by,
-        created_at=updated.created_at,
+    payment_type = Column(
+        Enum(
+            PaymentType,
+            name="paymenttype",
+            create_type=False,
+        ),
+        nullable=False,
     )
 
+    payment_date = Column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
 
-@router.get("/summary", response_model=PaymentSummaryOut)
-async def get_summary(
-    db: DBSession,
-    current_user: CurrentAnyUser,
-    date_from: Optional[date] = Query(None),
-    date_to: Optional[date] = Query(None),
-):
-    employee_id = None
-    if current_user.user_type == "employee":
-        employee_id = current_user.user.id
+    receipt_url = Column(Text, nullable=True)
 
-    return await payment_service.get_payment_summary(
-        db,
-        employee_id=employee_id,
-        date_from=date_from,
-        date_to=date_to,
+    notes = Column(Text, nullable=True)
+
+    created_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    prospect = relationship(
+        "Prospect",
+        back_populates="payments",
+    )
+
+    created_by = relationship(
+        "User",
+        foreign_keys=[created_by_id],
     )

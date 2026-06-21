@@ -3,6 +3,7 @@ from app.database.mixins import TimestampMixin
 from app.database import Base
 
 import enum
+from sqlalchemy.orm import relationship
 
 
 class UserRole(str, enum.Enum):
@@ -61,3 +62,5 @@ class EmployeeProfile(Base):
     address = Column(String(255))
     dob = Column(String(50))
     target = Column(String(12))
+
+

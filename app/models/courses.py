@@ -1,7 +1,12 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from app.database.mixins import TimestampMixin
 from app.database import Base
+from sqlalchemy.orm import relationship
 
+prospects = relationship(
+    "Prospect",
+    back_populates="course",
+)
 
 class Course(TimestampMixin, Base):
     """Master list of courses — admin-managed dropdown source for prospects."""

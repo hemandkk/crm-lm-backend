@@ -5,7 +5,9 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Prospect, Payment, ProspectDocument, TimelineEvent
+from app.models.prospects import Prospect
+from app.models.payments import Payment
+from app.models.prospect_documents import ProspectDocument
 from app.schemas import ProspectCreate, ProspectUpdate, ProspectOut
 from app.core.config import settings
 
